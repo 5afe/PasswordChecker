@@ -15,19 +15,25 @@ public struct PasswordInfo {
     public let crackTimesDisplay: [String: String]
     public let score: Int32
     public let calcTime: Int32
+    public let warning: String
+    public let suggestions: [String]
 
     public init(guesses: Int32 = 0,
                 guessesLog10: Double = 0.0,
                 crackTimesSeconds: [String: Double] = [:],
                 crackTimesDisplay: [String: String] = [:],
                 score: Int32 = 0,
-                calcTime: Int32 = 0) {
+                calcTime: Int32 = 0,
+                warning: String = "",
+                suggestions: [String] = []) {
         self.guesses = guesses
         self.guessesLog10 = guessesLog10
         self.crackTimesSeconds = crackTimesSeconds
         self.crackTimesDisplay = crackTimesDisplay
         self.score = score
         self.calcTime = calcTime
+        self.warning = warning
+        self.suggestions = suggestions
     }
 
     public static let empty = PasswordInfo()
@@ -87,13 +93,23 @@ public class PasswordChecker {
         guard let calcTime = result?.objectForKeyedSubscript(JSKey.calcTime.rawValue)?.toInt32() else {
             return .failure(PasswordCheckerError.unableToParseResult)
         }
+        
+        guard let warning = result?.objectForKeyedSubscript(JSKey.feedback.rawValue).objectForKeyedSubscript(JSKey.warning.rawValue).toString() else {
+            return .failure(PasswordCheckerError.unableToParseResult)
+        }
+        
+        guard let suggestions = result?.objectForKeyedSubscript(JSKey.feedback.rawValue).objectForKeyedSubscript(JSKey.suggestions.rawValue).toArray() as? [String] else {
+            return .failure(PasswordCheckerError.unableToParseResult)
+        }
 
         let passwordInfo = PasswordInfo(guesses: guesses,
                                         guessesLog10: guessesLog10,
                                         crackTimesSeconds: crackTimesSeconds,
                                         crackTimesDisplay: crackTimesDisplay,
                                         score: score,
-                                        calcTime: calcTime)
+                                        calcTime: calcTime,
+                                        warning: warning,
+                                        suggestions: suggestions)
 
         return .success(passwordInfo)
     }
@@ -108,6 +124,9 @@ private extension PasswordChecker {
         case crackTimesDisplay = "crack_times_display"
         case score
         case calcTime = "calc_time"
+        case feedback
+        case warning
+        case suggestions
     }
 
     enum JSScript {
